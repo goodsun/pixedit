@@ -305,6 +305,11 @@
                     <button class="tool-button" onclick="document.getElementById('bgUpload').click()" style="width: 100%;">Upload Background</button>
                     <button class="tool-button" onclick="clearBackground()" style="width: 100%; margin-top: 5px;">Clear Background</button>
                 </div>
+                <div style="margin-top: 10px;">
+                    <input type="file" id="fgUpload" accept="image/*" style="display: none;" onchange="handleForegroundUpload(event)">
+                    <button class="tool-button" onclick="document.getElementById('fgUpload').click()" style="width: 100%;">Upload Foreground</button>
+                    <button class="tool-button" onclick="clearForeground()" style="width: 100%; margin-top: 5px;">Clear Foreground</button>
+                </div>
             </div>
         </div>
         
@@ -334,6 +339,7 @@
         let isColorPickerMode = false;
         let isTransparentMode = false;
         let backgroundImage = null;
+        let foregroundImage = null;
         
         const canvas = document.getElementById('pixelCanvas');
         const previewCanvas = document.getElementById('previewCanvas');
@@ -492,6 +498,18 @@
                         previewCanvas.appendChild(rect);
                     }
                 }
+            }
+            
+            // Add foreground image if exists
+            if (foregroundImage) {
+                const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                image.setAttribute('href', foregroundImage);
+                image.setAttribute('x', '0');
+                image.setAttribute('y', '0');
+                image.setAttribute('width', actualWidth);
+                image.setAttribute('height', actualHeight);
+                image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+                previewCanvas.appendChild(image);
             }
             
             // Update size display
@@ -782,6 +800,7 @@
             cleanSvg.setAttribute('height', gridHeight);
             cleanSvg.setAttribute('viewBox', `0 0 ${gridWidth} ${gridHeight}`);
             cleanSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            cleanSvg.setAttribute('shape-rendering', 'crispEdges');
             
             // Copy pixels without stroke
             for (let y = 0; y < gridHeight; y++) {
@@ -791,9 +810,10 @@
                         const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                         rect.setAttribute('x', x);
                         rect.setAttribute('y', y);
-                        rect.setAttribute('width', 1);
-                        rect.setAttribute('height', 1);
+                        rect.setAttribute('width', '1');
+                        rect.setAttribute('height', '1');
                         rect.setAttribute('fill', color);
+                        rect.setAttribute('shape-rendering', 'crispEdges');
                         cleanSvg.appendChild(rect);
                     }
                 }
@@ -903,6 +923,24 @@
         
         function clearBackground() {
             backgroundImage = null;
+            updatePreview();
+        }
+        
+        // Foreground handling
+        function handleForegroundUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                foregroundImage = e.target.result;
+                updatePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function clearForeground() {
+            foregroundImage = null;
             updatePreview();
         }
         
