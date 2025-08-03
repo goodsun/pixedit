@@ -1,2 +1,2 @@
-# pixedi
-pixec art editor for svg
+# pixedit
+pixel art editor for svg
