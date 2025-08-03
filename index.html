@@ -155,10 +155,64 @@
             color: white;
         }
         
+        .bg-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .bg-button {
+            padding: 5px 12px;
+            border: 2px solid #ccc;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+        
+        .bg-button:hover {
+            background-color: #e0e0e0;
+        }
+        
+        .bg-button.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
+        #customBgColor {
+            width: 50px;
+            height: 30px;
+            cursor: pointer;
+        }
+        
         #canvas-container {
             display: flex;
             justify-content: center;
             margin-bottom: 20px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        #canvas-container.drag-over {
+            transform: scale(1.02);
+        }
+        
+        #canvas-container.drag-over::after {
+            content: 'Drop image here';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 10;
         }
         
         #pixelCanvas {
@@ -171,6 +225,18 @@
                 linear-gradient(-45deg, transparent 75%, #ddd 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+        
+        #pixelCanvas.bg-white {
+            background: white;
+        }
+        
+        #pixelCanvas.bg-dark {
+            background: #2a2a2a;
+        }
+        
+        #pixelCanvas.bg-custom {
+            background-image: none;
         }
         
         .action-buttons {
@@ -221,6 +287,26 @@
             align-items: center;
         }
         
+        .grid-preset-btn {
+            padding: 5px 10px;
+            border: 1px solid #ccc;
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .grid-preset-btn:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .grid-preset-btn.active {
+            background-color: #4CAF50;
+            color: white;
+            border-color: #4CAF50;
+        }
+        
         input[type="number"] {
             width: 60px;
             padding: 5px;
@@ -233,9 +319,61 @@
             gap: 5px;
             align-items: center;
         }
+        .nav-header {
+            background-color: #333;
+            padding: 15px 0;
+            margin: -20px -20px 20px -20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-title {
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+        
+        .nav-link:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-link.active {
+            background-color: #4CAF50;
+        }
     </style>
 </head>
 <body>
+    <nav class="nav-header">
+        <div class="nav-container">
+            <div class="nav-title">Pixel Art Tools</div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link active">Editor</a>
+                <a href="composer.html" class="nav-link">Layer Composer</a>
+            </div>
+        </div>
+    </nav>
+    
     <div class="container">
         <h1>Pixel Art Editor</h1>
         
@@ -262,10 +400,12 @@
             
             <div class="grid-size">
                 <span>Grid:</span>
-                <input type="number" id="gridWidth" value="16" min="8" max="64">
-                <span>×</span>
-                <input type="number" id="gridHeight" value="16" min="8" max="64">
-                <button class="btn-info" onclick="updateGridSize()">Update</button>
+                <button class="grid-preset-btn active" onclick="setGridSize(24)">24×24</button>
+                <button class="grid-preset-btn" onclick="setGridSize(32)">32×32</button>
+                <button class="grid-preset-btn" onclick="setGridSize(48)">48×48</button>
+                <button class="grid-preset-btn" onclick="setGridSize(64)">64×64</button>
+                <button class="grid-preset-btn" onclick="setGridSize(96)">96×96</button>
+                <button class="tool-button" onclick="toggleGridVisibility()" title="Toggle Grid">⊞</button>
             </div>
             
             <div class="shift-controls">
@@ -273,6 +413,15 @@
                 <button class="tool-button" onclick="shiftPixels('down')" title="Shift Down">↓</button>
                 <button class="tool-button" onclick="shiftPixels('left')" title="Shift Left">←</button>
                 <button class="tool-button" onclick="shiftPixels('right')" title="Shift Right">→</button>
+                <button class="tool-button" onclick="rotateCanvas90()" title="Rotate 90°">↻</button>
+            </div>
+            
+            <div class="bg-controls">
+                <span>Background:</span>
+                <button class="bg-button active" data-bg="checker" onclick="setCanvasBackground('checker')">Checker</button>
+                <button class="bg-button" data-bg="white" onclick="setCanvasBackground('white')">Light</button>
+                <button class="bg-button" data-bg="dark" onclick="setCanvasBackground('dark')">Dark</button>
+                <input type="color" id="customBgColor" value="#808080" onchange="setCanvasBackground('custom')">
             </div>
         </div>
         
@@ -318,9 +467,60 @@
             <button class="btn-info" onclick="redo()" title="Redo (Cmd+Shift+Z)">↷ Redo</button>
             <input type="file" id="fileUpload" accept=".svg" style="display: none;" onchange="handleFileUpload(event)">
             <button class="btn-info" onclick="document.getElementById('fileUpload').click()">Upload SVG</button>
-            <button class="btn-primary" onclick="downloadImage()">Download PNG</button>
             <button class="btn-primary" onclick="downloadSVG()">Download SVG</button>
+            <button class="btn-info" onclick="showDownloadOptions()">SVG Options</button>
             <button class="btn-secondary" onclick="if(confirm('Clear the entire canvas?')) clearCanvas()">Clear</button>
+        </div>
+    </div>
+    
+    <!-- Download Options Modal -->
+    <div id="downloadModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); min-width: 300px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px;">Download SVG Options</h3>
+            
+            <div style="margin-bottom: 15px;">
+                <input type="radio" id="fullCanvas" name="downloadType" value="full" checked>
+                <label for="fullCanvas">Full Canvas (${gridWidth}×${gridHeight})</label>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <input type="radio" id="autoFit" name="downloadType" value="auto">
+                <label for="autoFit">Auto-fit to content (trim blank space)</label>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <input type="radio" id="customArea" name="downloadType" value="custom">
+                <label for="customArea">Custom area:</label>
+                <div style="margin-left: 25px; margin-top: 10px;">
+                    X: <input type="number" id="customX" value="0" min="0" max="${gridWidth}" style="width: 50px">
+                    Y: <input type="number" id="customY" value="0" min="0" max="${gridHeight}" style="width: 50px">
+                    <br style="margin-bottom: 5px">
+                    Width: <input type="number" id="customW" value="${gridWidth}" min="1" max="${gridWidth}" style="width: 50px">
+                    Height: <input type="number" id="customH" value="${gridHeight}" min="1" max="${gridHeight}" style="width: 50px">
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 20px; padding-top: 15px; border-top: 1px solid #ddd;">
+                <label style="font-weight: bold;">Display Size:</label>
+                <div style="margin-top: 10px;">
+                    <label style="display: block; margin-bottom: 5px;">
+                        <input type="radio" name="displaySize" value="auto" checked> Auto (100% responsive)
+                    </label>
+                    <label style="display: block; margin-bottom: 5px;">
+                        <input type="radio" name="displaySize" value="pixel"> Pixel size: 
+                        <input type="number" id="pixelMultiplier" value="16" min="1" max="100" style="width: 50px">px per pixel
+                    </label>
+                    <label style="display: block;">
+                        <input type="radio" name="displaySize" value="fixed"> Fixed size: 
+                        <input type="number" id="fixedWidth" value="256" min="1" style="width: 60px">px
+                    </label>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeDownloadModal()" style="padding: 8px 16px;">Cancel</button>
+                <button onclick="downloadWithOptions()" style="padding: 8px 16px; background: #4CAF50; color: white; border: none; border-radius: 4px;">Download</button>
+            </div>
         </div>
     </div>
 
@@ -328,18 +528,20 @@
         let currentColor = '#000000';
         let currentTool = 'draw';
         let isDrawing = false;
-        let gridWidth = 16;
-        let gridHeight = 16;
-        let pixelSize = 32;
+        let gridWidth = 24;
+        let gridHeight = 24;
+        let pixelSize = Math.min(512 / 24, 512 / 24);
         let pixels = [];
         let history = [];
         let historyStep = -1;
         const maxHistorySize = 50;
+        let uploadedFileName = null; // Store the uploaded file name
         let previewScale = 1;
         let isColorPickerMode = false;
         let isTransparentMode = false;
         let backgroundImage = null;
         let foregroundImage = null;
+        let isGridVisible = true; // Grid visibility state
         
         const canvas = document.getElementById('pixelCanvas');
         const previewCanvas = document.getElementById('previewCanvas');
@@ -434,8 +636,13 @@
                     rect.setAttribute('width', pixelSize);
                     rect.setAttribute('height', pixelSize);
                     rect.setAttribute('fill', 'transparent');
-                    rect.setAttribute('stroke', '#ddd');
-                    rect.setAttribute('stroke-width', '1');
+                    if (isGridVisible) {
+                        rect.setAttribute('stroke', '#ddd');
+                        rect.setAttribute('stroke-width', '1');
+                    } else {
+                        rect.setAttribute('stroke', 'none');
+                        rect.setAttribute('stroke-width', '0');
+                    }
                     rect.dataset.x = x;
                     rect.dataset.y = y;
                     
@@ -648,12 +855,78 @@
             }
         }
         
+        // Set grid size with preset values
+        function setGridSize(size) {
+            // Update button states
+            document.querySelectorAll('.grid-preset-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update grid
+            gridWidth = size;
+            gridHeight = size;
+            updateGridSize();
+        }
+        
+        // Toggle grid visibility
+        function toggleGridVisibility() {
+            isGridVisible = !isGridVisible;
+            
+            // Update all pixel strokes
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    if (isGridVisible) {
+                        pixels[y][x].setAttribute('stroke', '#ddd');
+                        pixels[y][x].setAttribute('stroke-width', '1');
+                    } else {
+                        pixels[y][x].setAttribute('stroke', 'none');
+                        pixels[y][x].setAttribute('stroke-width', '0');
+                    }
+                }
+            }
+        }
+        
         // Update grid size
         function updateGridSize() {
-            gridWidth = parseInt(document.getElementById('gridWidth').value);
-            gridHeight = parseInt(document.getElementById('gridHeight').value);
+            // Save current pixel data before updating
+            const oldPixelData = [];
+            const oldGridWidth = gridWidth;
+            const oldGridHeight = gridHeight;
+            
+            for (let y = 0; y < oldGridHeight; y++) {
+                oldPixelData[y] = [];
+                for (let x = 0; x < oldGridWidth; x++) {
+                    if (pixels[y] && pixels[y][x]) {
+                        oldPixelData[y][x] = pixels[y][x].getAttribute('fill');
+                    } else {
+                        oldPixelData[y][x] = 'transparent';
+                    }
+                }
+            }
+            
+            // Update grid dimensions - already set by setGridSize if called from there
+            // If called directly, gridWidth and gridHeight should already be set
             pixelSize = Math.min(512 / gridWidth, 512 / gridHeight);
-            initializeGrid();
+            
+            // Initialize new grid without saving state
+            initializeGrid(false);
+            
+            // Restore pixel data to the new grid
+            const minWidth = Math.min(oldGridWidth, gridWidth);
+            const minHeight = Math.min(oldGridHeight, gridHeight);
+            
+            for (let y = 0; y < minHeight; y++) {
+                for (let x = 0; x < minWidth; x++) {
+                    if (oldPixelData[y][x] !== 'transparent') {
+                        pixels[y][x].setAttribute('fill', oldPixelData[y][x]);
+                    }
+                }
+            }
+            
+            // Save state after transferring data
+            saveState();
+            updatePreview();
         }
         
         // Clear canvas
@@ -707,10 +980,56 @@
             updatePreview();
         }
         
+        // Rotate canvas 90 degrees clockwise
+        function rotateCanvas90() {
+            saveState();
+            
+            // For non-square grids, we need to swap dimensions
+            const oldGridWidth = gridWidth;
+            const oldGridHeight = gridHeight;
+            
+            // Create a copy of current pixel colors
+            const colorMap = [];
+            for (let y = 0; y < oldGridHeight; y++) {
+                colorMap[y] = [];
+                for (let x = 0; x < oldGridWidth; x++) {
+                    colorMap[y][x] = pixels[y][x].getAttribute('fill');
+                }
+            }
+            
+            // Update grid dimensions for non-square grids
+            if (oldGridWidth !== oldGridHeight) {
+                gridWidth = oldGridHeight;
+                gridHeight = oldGridWidth;
+                document.getElementById('gridWidth').value = gridWidth;
+                document.getElementById('gridHeight').value = gridHeight;
+                pixelSize = Math.min(512 / gridWidth, 512 / gridHeight);
+                
+                // Initialize new grid without saving state
+                initializeGrid(false);
+            }
+            
+            // Apply rotation: (x,y) -> (y, width-1-x)
+            for (let y = 0; y < oldGridHeight; y++) {
+                for (let x = 0; x < oldGridWidth; x++) {
+                    const newX = y;
+                    const newY = oldGridWidth - 1 - x;
+                    if (newX < gridWidth && newY < gridHeight) {
+                        pixels[newY][newX].setAttribute('fill', colorMap[y][x]);
+                    }
+                }
+            }
+            
+            updatePreview();
+        }
+        
         // File upload handling
         function handleFileUpload(event) {
             const file = event.target.files[0];
             if (!file) return;
+            
+            // Save the filename without extension
+            uploadedFileName = file.name.replace(/\.[^/.]+$/, '');
             
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -729,6 +1048,9 @@
         }
         
         function parseSVGToPixels(svgElement) {
+            // Save state before overlaying
+            saveState();
+            
             // Get viewBox or width/height
             let width, height;
             const viewBox = svgElement.getAttribute('viewBox');
@@ -741,28 +1063,32 @@
                 height = parseInt(svgElement.getAttribute('height')) || 24;
             }
             
-            // Update grid size if needed
-            if (width !== gridWidth || height !== gridHeight) {
-                document.getElementById('gridWidth').value = width;
-                document.getElementById('gridHeight').value = height;
-                updateGridSize();
-            }
+            // Don't update grid size - keep existing grid
+            // Calculate scaling factors to fit SVG into current grid
+            const scaleX = gridWidth / width;
+            const scaleY = gridHeight / height;
             
-            // Clear current canvas
-            clearCanvas();
-            
-            // Parse rect elements
+            // Parse rect elements with scaling
             const rects = svgElement.querySelectorAll('rect');
             rects.forEach(rect => {
-                const x = parseInt(rect.getAttribute('x'));
-                const y = parseInt(rect.getAttribute('y'));
-                const w = parseInt(rect.getAttribute('width'));
-                const h = parseInt(rect.getAttribute('height'));
+                const x = parseFloat(rect.getAttribute('x') || 0);
+                const y = parseFloat(rect.getAttribute('y') || 0);
+                const w = parseFloat(rect.getAttribute('width') || 0);
+                const h = parseFloat(rect.getAttribute('height') || 0);
                 const fill = rect.getAttribute('fill') || '#000000';
                 
-                // Fill the pixels
-                for (let py = y; py < y + h && py < gridHeight; py++) {
-                    for (let px = x; px < x + w && px < gridWidth; px++) {
+                // Skip transparent rects
+                if (fill === 'transparent' || fill === 'none') return;
+                
+                // Scale coordinates to fit current grid
+                const scaledX = Math.floor(x * scaleX);
+                const scaledY = Math.floor(y * scaleY);
+                const scaledW = Math.max(1, Math.ceil(w * scaleX));
+                const scaledH = Math.max(1, Math.ceil(h * scaleY));
+                
+                // Overlay the pixels (don't replace transparent areas)
+                for (let py = scaledY; py < scaledY + scaledH && py < gridHeight; py++) {
+                    for (let px = scaledX; px < scaledX + scaledW && px < gridWidth; px++) {
                         if (px >= 0 && py >= 0 && px < gridWidth && py < gridHeight) {
                             pixels[py][px].setAttribute('fill', fill);
                         }
@@ -773,28 +1099,54 @@
             // Parse path elements (simplified - just fill bounding box)
             const paths = svgElement.querySelectorAll('path');
             paths.forEach(path => {
-                const bbox = path.getBBox ? path.getBBox() : {x: 0, y: 0, width: 0, height: 0};
                 const fill = path.getAttribute('fill') || '#000000';
-                if (fill !== 'none') {
-                    const x = Math.floor(bbox.x);
-                    const y = Math.floor(bbox.y);
-                    const w = Math.ceil(bbox.width);
-                    const h = Math.ceil(bbox.height);
+                
+                // Skip transparent paths
+                if (fill === 'none' || fill === 'transparent') return;
+                
+                // Try to get bounding box (may not work in all environments)
+                try {
+                    const bbox = path.getBBox();
+                    const x = bbox.x;
+                    const y = bbox.y;
+                    const w = bbox.width;
+                    const h = bbox.height;
                     
-                    for (let py = y; py < y + h && py < gridHeight; py++) {
-                        for (let px = x; px < x + w && px < gridWidth; px++) {
+                    // Scale coordinates to fit current grid
+                    const scaledX = Math.floor(x * scaleX);
+                    const scaledY = Math.floor(y * scaleY);
+                    const scaledW = Math.max(1, Math.ceil(w * scaleX));
+                    const scaledH = Math.max(1, Math.ceil(h * scaleY));
+                    
+                    // Overlay the pixels
+                    for (let py = scaledY; py < scaledY + scaledH && py < gridHeight; py++) {
+                        for (let px = scaledX; px < scaledX + scaledW && px < gridWidth; px++) {
                             if (px >= 0 && py >= 0 && px < gridWidth && py < gridHeight) {
                                 pixels[py][px].setAttribute('fill', fill);
                             }
                         }
                     }
+                } catch (e) {
+                    // getBBox might not work in some contexts, skip this path
                 }
             });
         }
         
-        // Download functions
+        // Download functions with optimization
         function downloadSVG() {
-            // Create a clean SVG without strokes
+            // Default behavior: download full canvas with 16px per pixel
+            const viewBox = { x: 0, y: 0, width: gridWidth, height: gridHeight };
+            const displaySize = {
+                type: 'pixel',
+                width: gridWidth * 16,
+                height: gridHeight * 16
+            };
+            downloadSVGWithViewBox(viewBox, displaySize);
+        }
+        
+        // Legacy function kept for compatibility
+        function downloadSVG_old() {
+            // Create a clean SVG
             const cleanSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             cleanSvg.setAttribute('width', gridWidth);
             cleanSvg.setAttribute('height', gridHeight);
@@ -802,31 +1154,98 @@
             cleanSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
             cleanSvg.setAttribute('shape-rendering', 'crispEdges');
             
-            // Copy pixels without stroke
+            // Group pixels by color for optimization
+            const colorGroups = {};
+            
             for (let y = 0; y < gridHeight; y++) {
                 for (let x = 0; x < gridWidth; x++) {
                     const color = pixels[y][x].getAttribute('fill');
                     if (color !== 'transparent') {
-                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                        rect.setAttribute('x', x);
-                        rect.setAttribute('y', y);
-                        rect.setAttribute('width', '1');
-                        rect.setAttribute('height', '1');
-                        rect.setAttribute('fill', color);
-                        rect.setAttribute('shape-rendering', 'crispEdges');
-                        cleanSvg.appendChild(rect);
+                        if (!colorGroups[color]) {
+                            colorGroups[color] = [];
+                        }
+                        colorGroups[color].push({x, y});
                     }
                 }
             }
             
-            const svgData = new XMLSerializer().serializeToString(cleanSvg);
+            // Create optimized rectangles by merging adjacent pixels
+            for (const color in colorGroups) {
+                const positions = colorGroups[color];
+                const merged = mergeAdjacentPixels(positions);
+                
+                merged.forEach(rect => {
+                    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    r.setAttribute('x', rect.x);
+                    r.setAttribute('y', rect.y);
+                    r.setAttribute('width', rect.w);
+                    r.setAttribute('height', rect.h);
+                    r.setAttribute('fill', color);
+                    cleanSvg.appendChild(r);
+                });
+            }
+            
+            // Serialize with minimal formatting
+            let svgData = new XMLSerializer().serializeToString(cleanSvg);
+            // Remove unnecessary whitespace
+            svgData = svgData.replace(/>\s+</g, '><');
+            // Convert hex colors to shorter format if possible
+            svgData = svgData.replace(/#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3/gi, '#$1$2$3');
+            
             const blob = new Blob([svgData], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'pixel-art.svg';
+            link.download = uploadedFileName ? `${uploadedFileName}.svg` : 'pixel-art.svg';
             link.click();
             URL.revokeObjectURL(url);
+        }
+        
+        // Helper function to merge adjacent pixels into larger rectangles
+        function mergeAdjacentPixels(positions) {
+            const visited = new Set();
+            const rectangles = [];
+            
+            positions.forEach(pos => {
+                const key = `${pos.x},${pos.y}`;
+                if (visited.has(key)) return;
+                
+                // Try to expand horizontally first
+                let width = 1;
+                let height = 1;
+                
+                // Check horizontal expansion
+                while (positions.some(p => p.x === pos.x + width && p.y === pos.y) && 
+                       !visited.has(`${pos.x + width},${pos.y}`)) {
+                    width++;
+                }
+                
+                // Check if we can expand vertically for the entire width
+                let canExpandVertically = true;
+                while (canExpandVertically) {
+                    for (let w = 0; w < width; w++) {
+                        if (!positions.some(p => p.x === pos.x + w && p.y === pos.y + height) ||
+                            visited.has(`${pos.x + w},${pos.y + height}`)) {
+                            canExpandVertically = false;
+                            break;
+                        }
+                    }
+                    if (canExpandVertically) {
+                        height++;
+                    }
+                }
+                
+                // Mark all pixels in this rectangle as visited
+                for (let h = 0; h < height; h++) {
+                    for (let w = 0; w < width; w++) {
+                        visited.add(`${pos.x + w},${pos.y + h}`);
+                    }
+                }
+                
+                rectangles.push({ x: pos.x, y: pos.y, w: width, h: height });
+            });
+            
+            return rectangles;
         }
         
         function downloadImage() {
@@ -846,7 +1265,7 @@
                     const pngUrl = URL.createObjectURL(blob);
                     const link = document.createElement('a');
                     link.href = pngUrl;
-                    link.download = 'pixel-art.png';
+                    link.download = uploadedFileName ? `${uploadedFileName}.png` : 'pixel-art.png';
                     link.click();
                     URL.revokeObjectURL(pngUrl);
                 });
@@ -908,6 +1327,34 @@
             });
         });
         
+        // Canvas background color handling
+        function setCanvasBackground(type) {
+            const canvas = document.getElementById('pixelCanvas');
+            const buttons = document.querySelectorAll('.bg-button');
+            
+            // Remove all background classes
+            canvas.classList.remove('bg-white', 'bg-dark', 'bg-custom');
+            
+            // Remove active class from all buttons
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (type === 'checker') {
+                // Default checker pattern (no additional class needed)
+                document.querySelector('[data-bg="checker"]').classList.add('active');
+            } else if (type === 'white') {
+                canvas.classList.add('bg-white');
+                document.querySelector('[data-bg="white"]').classList.add('active');
+            } else if (type === 'dark') {
+                canvas.classList.add('bg-dark');
+                document.querySelector('[data-bg="dark"]').classList.add('active');
+            } else if (type === 'custom') {
+                const customColor = document.getElementById('customBgColor').value;
+                canvas.classList.add('bg-custom');
+                canvas.style.backgroundColor = customColor;
+                // No button to mark as active for custom color
+            }
+        }
+        
         // Background handling
         function handleBackgroundUpload(event) {
             const file = event.target.files[0];
@@ -944,8 +1391,285 @@
             updatePreview();
         }
         
+        // Drag & Drop handling
+        function setupDragAndDrop() {
+            const canvasContainer = document.getElementById('canvas-container');
+            const body = document.body;
+            
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                canvasContainer.addEventListener(eventName, preventDefaults, false);
+                body.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                canvasContainer.addEventListener(eventName, highlight, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                canvasContainer.addEventListener(eventName, unhighlight, false);
+            });
+            
+            function highlight(e) {
+                canvasContainer.classList.add('drag-over');
+            }
+            
+            function unhighlight(e) {
+                canvasContainer.classList.remove('drag-over');
+            }
+            
+            // Handle dropped files
+            canvasContainer.addEventListener('drop', handleDroppedFiles, false);
+            
+            function handleDroppedFiles(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                
+                if (files.length > 0) {
+                    handleDroppedFile(files[0]);
+                }
+            }
+            
+            function handleDroppedFile(file) {
+                // Save the filename without extension
+                uploadedFileName = file.name.replace(/\.[^/.]+$/, '');
+                
+                if (file.type === 'image/svg+xml' || file.name.endsWith('.svg')) {
+                    // Handle SVG files
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const parser = new DOMParser();
+                        const svgDoc = parser.parseFromString(e.target.result, 'image/svg+xml');
+                        const svgElement = svgDoc.querySelector('svg');
+                        
+                        if (svgElement) {
+                            parseSVGToPixels(svgElement);
+                        } else {
+                            alert('Invalid SVG file');
+                        }
+                    };
+                    reader.readAsText(file);
+                } else if (file.type.startsWith('image/')) {
+                    // Handle raster images (PNG, JPG, etc.)
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const img = new Image();
+                        img.onload = function() {
+                            convertImageToPixels(img);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    alert('Please drop an image file (SVG, PNG, JPG, etc.)');
+                }
+            }
+        }
+        
+        // Convert raster image to pixels
+        function convertImageToPixels(img) {
+            saveState();
+            
+            // Create temporary canvas for image processing
+            const tempCanvas = document.createElement('canvas');
+            const ctx = tempCanvas.getContext('2d');
+            
+            // Scale image to fit grid
+            tempCanvas.width = gridWidth;
+            tempCanvas.height = gridHeight;
+            ctx.drawImage(img, 0, 0, gridWidth, gridHeight);
+            
+            // Get pixel data
+            const imageData = ctx.getImageData(0, 0, gridWidth, gridHeight);
+            const data = imageData.data;
+            
+            // Convert to pixel art
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const i = (y * gridWidth + x) * 4;
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+                    const a = data[i + 3];
+                    
+                    if (a > 128) { // Only set non-transparent pixels
+                        const hex = '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+                        pixels[y][x].setAttribute('fill', hex);
+                    }
+                }
+            }
+            
+            updatePreview();
+        }
+        
+        // Modal functions
+        function showDownloadOptions() {
+            const modal = document.getElementById('downloadModal');
+            // Update the label text with current grid size
+            document.querySelector('label[for="fullCanvas"]').textContent = `Full Canvas (${gridWidth}×${gridHeight})`;
+            // Update input max values
+            document.getElementById('customX').max = gridWidth - 1;
+            document.getElementById('customY').max = gridHeight - 1;
+            document.getElementById('customW').max = gridWidth;
+            document.getElementById('customW').value = gridWidth;
+            document.getElementById('customH').max = gridHeight;
+            document.getElementById('customH').value = gridHeight;
+            modal.style.display = 'block';
+        }
+        
+        function closeDownloadModal() {
+            document.getElementById('downloadModal').style.display = 'none';
+        }
+        
+        function getContentBounds() {
+            let minX = gridWidth, minY = gridHeight, maxX = -1, maxY = -1;
+            
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const color = pixels[y][x].getAttribute('fill');
+                    if (color !== 'transparent') {
+                        minX = Math.min(minX, x);
+                        minY = Math.min(minY, y);
+                        maxX = Math.max(maxX, x);
+                        maxY = Math.max(maxY, y);
+                    }
+                }
+            }
+            
+            // If no content found, return full canvas
+            if (maxX === -1) {
+                return { x: 0, y: 0, width: gridWidth, height: gridHeight };
+            }
+            
+            return {
+                x: minX,
+                y: minY,
+                width: maxX - minX + 1,
+                height: maxY - minY + 1
+            };
+        }
+        
+        function downloadWithOptions() {
+            const downloadType = document.querySelector('input[name="downloadType"]:checked').value;
+            let viewBox;
+            
+            if (downloadType === 'full') {
+                viewBox = { x: 0, y: 0, width: gridWidth, height: gridHeight };
+            } else if (downloadType === 'auto') {
+                viewBox = getContentBounds();
+            } else if (downloadType === 'custom') {
+                viewBox = {
+                    x: parseInt(document.getElementById('customX').value),
+                    y: parseInt(document.getElementById('customY').value),
+                    width: parseInt(document.getElementById('customW').value),
+                    height: parseInt(document.getElementById('customH').value)
+                };
+            }
+            
+            const displaySizeType = document.querySelector('input[name="displaySize"]:checked').value;
+            let displaySize = {};
+            
+            if (displaySizeType === 'auto') {
+                displaySize = { type: 'auto' };
+            } else if (displaySizeType === 'pixel') {
+                const multiplier = parseInt(document.getElementById('pixelMultiplier').value);
+                displaySize = { 
+                    type: 'pixel', 
+                    width: viewBox.width * multiplier,
+                    height: viewBox.height * multiplier
+                };
+            } else if (displaySizeType === 'fixed') {
+                const fixedWidth = parseInt(document.getElementById('fixedWidth').value);
+                displaySize = { 
+                    type: 'fixed', 
+                    width: fixedWidth,
+                    height: Math.round(fixedWidth * (viewBox.height / viewBox.width))
+                };
+            }
+            
+            closeDownloadModal();
+            downloadSVGWithViewBox(viewBox, displaySize);
+        }
+        
+        function downloadSVGWithViewBox(viewBox, displaySize = null) {
+            // Create a clean SVG
+            const cleanSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            
+            // Set display size based on options
+            if (displaySize && displaySize.type === 'pixel') {
+                cleanSvg.setAttribute('width', displaySize.width);
+                cleanSvg.setAttribute('height', displaySize.height);
+            } else if (displaySize && displaySize.type === 'fixed') {
+                cleanSvg.setAttribute('width', displaySize.width);
+                cleanSvg.setAttribute('height', displaySize.height);
+            } else {
+                // Auto or default - use 100% for responsive sizing
+                cleanSvg.setAttribute('width', '100%');
+                cleanSvg.setAttribute('height', '100%');
+            }
+            
+            cleanSvg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.width} ${viewBox.height}`);
+            cleanSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            cleanSvg.setAttribute('shape-rendering', 'crispEdges');
+            
+            // Group pixels by color for optimization (only within viewBox)
+            const colorGroups = {};
+            
+            for (let y = viewBox.y; y < viewBox.y + viewBox.height && y < gridHeight; y++) {
+                for (let x = viewBox.x; x < viewBox.x + viewBox.width && x < gridWidth; x++) {
+                    if (x >= 0 && y >= 0 && x < gridWidth && y < gridHeight) {
+                        const color = pixels[y][x].getAttribute('fill');
+                        if (color !== 'transparent') {
+                            if (!colorGroups[color]) {
+                                colorGroups[color] = [];
+                            }
+                            colorGroups[color].push({x, y});
+                        }
+                    }
+                }
+            }
+            
+            // Create optimized rectangles by merging adjacent pixels
+            for (const color in colorGroups) {
+                const positions = colorGroups[color];
+                const merged = mergeAdjacentPixels(positions);
+                
+                merged.forEach(rect => {
+                    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    r.setAttribute('x', rect.x);
+                    r.setAttribute('y', rect.y);
+                    r.setAttribute('width', rect.w);
+                    r.setAttribute('height', rect.h);
+                    r.setAttribute('fill', color);
+                    cleanSvg.appendChild(r);
+                });
+            }
+            
+            // Serialize with minimal formatting
+            let svgData = new XMLSerializer().serializeToString(cleanSvg);
+            // Remove unnecessary whitespace
+            svgData = svgData.replace(/>\s+</g, '><');
+            // Convert hex colors to shorter format if possible
+            svgData = svgData.replace(/#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3/gi, '#$1$2$3');
+            
+            const blob = new Blob([svgData], { type: 'image/svg+xml' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = uploadedFileName ? `${uploadedFileName}.svg` : 'pixel-art.svg';
+            link.click();
+            URL.revokeObjectURL(url);
+        }
+        
         // Initialize
         initializeGrid();
+        setupDragAndDrop();
     </script>
 </body>
 </html>
