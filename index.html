@@ -61,6 +61,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
         
         #previewCanvas {
@@ -299,6 +300,11 @@
                 <div style="text-align: center; color: #666; font-size: 12px;">
                     <span id="previewSize"></span>
                 </div>
+                <div style="margin-top: 15px;">
+                    <input type="file" id="bgUpload" accept="image/*" style="display: none;" onchange="handleBackgroundUpload(event)">
+                    <button class="tool-button" onclick="document.getElementById('bgUpload').click()" style="width: 100%;">Upload Background</button>
+                    <button class="tool-button" onclick="clearBackground()" style="width: 100%; margin-top: 5px;">Clear Background</button>
+                </div>
             </div>
         </div>
         
@@ -327,6 +333,7 @@
         let previewScale = 1;
         let isColorPickerMode = false;
         let isTransparentMode = false;
+        let backgroundImage = null;
         
         const canvas = document.getElementById('pixelCanvas');
         const previewCanvas = document.getElementById('previewCanvas');
@@ -458,6 +465,18 @@
             
             // Clear preview
             previewCanvas.innerHTML = '';
+            
+            // Add background image if exists
+            if (backgroundImage) {
+                const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+                image.setAttribute('href', backgroundImage);
+                image.setAttribute('x', '0');
+                image.setAttribute('y', '0');
+                image.setAttribute('width', actualWidth);
+                image.setAttribute('height', actualHeight);
+                image.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+                previewCanvas.appendChild(image);
+            }
             
             // Copy pixels to preview
             for (let y = 0; y < gridHeight; y++) {
@@ -757,7 +776,30 @@
         
         // Download functions
         function downloadSVG() {
-            const svgData = canvas.outerHTML;
+            // Create a clean SVG without strokes
+            const cleanSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            cleanSvg.setAttribute('width', gridWidth);
+            cleanSvg.setAttribute('height', gridHeight);
+            cleanSvg.setAttribute('viewBox', `0 0 ${gridWidth} ${gridHeight}`);
+            cleanSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            
+            // Copy pixels without stroke
+            for (let y = 0; y < gridHeight; y++) {
+                for (let x = 0; x < gridWidth; x++) {
+                    const color = pixels[y][x].getAttribute('fill');
+                    if (color !== 'transparent') {
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x);
+                        rect.setAttribute('y', y);
+                        rect.setAttribute('width', 1);
+                        rect.setAttribute('height', 1);
+                        rect.setAttribute('fill', color);
+                        cleanSvg.appendChild(rect);
+                    }
+                }
+            }
+            
+            const svgData = new XMLSerializer().serializeToString(cleanSvg);
             const blob = new Blob([svgData], { type: 'image/svg+xml' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
@@ -845,6 +887,24 @@
                 updatePreview();
             });
         });
+        
+        // Background handling
+        function handleBackgroundUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                backgroundImage = e.target.result;
+                updatePreview();
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function clearBackground() {
+            backgroundImage = null;
+            updatePreview();
+        }
         
         // Initialize
         initializeGrid();
