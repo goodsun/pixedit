@@ -140,7 +140,7 @@
         .preview-box {
             position: relative;
             width: 100%;
-            height: 100%;
+            height: 400px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -151,7 +151,7 @@
                 linear-gradient(-45deg, transparent 75%, #ddd 75%);
             background-size: 20px 20px;
             background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
-            min-height: 300px;
+            overflow: hidden;
         }
         
         .preview-canvas {
@@ -219,6 +219,80 @@
             color: white;
             border-color: #4CAF50;
         }
+        
+        .asset-toggle-btn {
+            width: 100%;
+            margin-top: 10px;
+            padding: 8px 15px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .asset-toggle-btn:hover {
+            background: #1976D2;
+        }
+        
+        .asset-selector {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background: #f9f9f9;
+        }
+        
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+        }
+        
+        .asset-item {
+            width: 60px;
+            height: 60px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            overflow: hidden;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .asset-item:hover {
+            border-color: #4CAF50;
+            transform: scale(1.05);
+        }
+        
+        .asset-item img {
+            max-width: 90%;
+            max-height: 90%;
+        }
+        
+        .scale-control {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .scale-control input[type="range"] {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .scale-value {
+            min-width: 40px;
+            text-align: right;
+            font-weight: bold;
+        }
         .nav-header {
             background-color: #333;
             padding: 15px 0;
@@ -280,7 +354,7 @@
         <div class="main-content">
             <div class="layers-section">
                 <h2>Layers</h2>
-                <div class="layer-order">Drop order: Background → Main (8x) → Item (4x) → Effect</div>
+                <div class="layer-order">Drop order: Background → Main → Item → Effect</div>
                 
                 <div class="layer-item" data-layer="effect">
                     <div class="layer-header">
@@ -293,11 +367,20 @@
                     <div class="drop-zone" id="effect-drop">
                         Drop effect.svg here
                     </div>
+                    <div class="asset-selector" id="effect-assets" style="display: none;">
+                        <div class="asset-grid"></div>
+                    </div>
+                    <button class="asset-toggle-btn" onclick="toggleAssetSelector('effect')">Select from Assets</button>
+                    <div class="scale-control">
+                        <label>Scale: </label>
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" oninput="updateLayerScale('effect', this.value)">
+                        <span class="scale-value">1x</span>
+                    </div>
                 </div>
                 
                 <div class="layer-item" data-layer="item">
                     <div class="layer-header">
-                        <span class="layer-title">Item Layer (4x)</span>
+                        <span class="layer-title">Item Layer</span>
                         <div class="layer-controls">
                             <button class="visibility-toggle" onclick="toggleLayer('item')">👁️</button>
                             <button class="remove-btn" onclick="removeLayer('item')">Remove</button>
@@ -306,11 +389,20 @@
                     <div class="drop-zone" id="item-drop">
                         Drop item.svg here
                     </div>
+                    <div class="asset-selector" id="item-assets" style="display: none;">
+                        <div class="asset-grid"></div>
+                    </div>
+                    <button class="asset-toggle-btn" onclick="toggleAssetSelector('item')">Select from Assets</button>
+                    <div class="scale-control">
+                        <label>Scale: </label>
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" oninput="updateLayerScale('item', this.value)">
+                        <span class="scale-value">1x</span>
+                    </div>
                 </div>
                 
                 <div class="layer-item" data-layer="main">
                     <div class="layer-header">
-                        <span class="layer-title">Main Layer (8x)</span>
+                        <span class="layer-title">Main Layer</span>
                         <div class="layer-controls">
                             <button class="visibility-toggle" onclick="toggleLayer('main')">👁️</button>
                             <button class="remove-btn" onclick="removeLayer('main')">Remove</button>
@@ -318,6 +410,15 @@
                     </div>
                     <div class="drop-zone" id="main-drop">
                         Drop main.svg here
+                    </div>
+                    <div class="asset-selector" id="main-assets" style="display: none;">
+                        <div class="asset-grid"></div>
+                    </div>
+                    <button class="asset-toggle-btn" onclick="toggleAssetSelector('main')">Select from Assets</button>
+                    <div class="scale-control">
+                        <label>Scale: </label>
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" oninput="updateLayerScale('main', this.value)">
+                        <span class="scale-value">1x</span>
                     </div>
                 </div>
                 
@@ -332,29 +433,27 @@
                     <div class="drop-zone" id="bg-drop">
                         Drop bg.svg here
                     </div>
+                    <div class="asset-selector" id="bg-assets" style="display: none;">
+                        <div class="asset-grid"></div>
+                    </div>
+                    <button class="asset-toggle-btn" onclick="toggleAssetSelector('bg')">Select from Assets</button>
+                    <div class="scale-control">
+                        <label>Scale: </label>
+                        <input type="range" min="0.1" max="5" step="0.1" value="1" oninput="updateLayerScale('bg', this.value)">
+                        <span class="scale-value">1x</span>
+                    </div>
                 </div>
             </div>
             
             <div class="preview-section">
-                <h3>Real-time Preview</h3>
-                <div class="scale-controls">
-                    <span>Scale:</span>
-                    <button class="scale-button active" data-scale="1">1x</button>
-                    <button class="scale-button" data-scale="2">2x</button>
-                    <button class="scale-button" data-scale="4">4x</button>
-                    <button class="scale-button" data-scale="8">8x</button>
-                    <button class="scale-button" data-scale="16">16x</button>
-                </div>
+                <h3>Preview</h3>
                 <div class="preview-box">
-                    <svg class="preview-canvas" id="preview" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="preview-canvas" id="preview" viewBox="0 0 512 512" width="400" height="400" xmlns="http://www.w3.org/2000/svg">
                         <g id="bg-layer"></g>
                         <g id="main-layer"></g>
                         <g id="item-layer"></g>
                         <g id="effect-layer"></g>
                     </svg>
-                </div>
-                <div style="text-align: center; color: #666; font-size: 12px;">
-                    <span id="previewSize"></span>
                 </div>
                 
                 <div class="controls">
@@ -366,16 +465,26 @@
     </div>
     
     <script>
-        // Layer data storage with scale settings
+        // Layer data storage
         const layers = {
             effect: { content: null, visible: true, scale: 1 },
-            item: { content: null, visible: true, scale: 4 },
-            main: { content: null, visible: true, scale: 8 },
+            item: { content: null, visible: true, scale: 1 },
+            main: { content: null, visible: true, scale: 1 },
             bg: { content: null, visible: true, scale: 1 }
+        };
+        
+        // Asset lists for each layer type
+        const assetLists = {
+            effect: ['blizzard-effect.svg', 'lightning.svg'],
+            item: ['amulet.svg', 'arm.svg', 'crown.svg', 'head.svg', 'poison.svg', 'scythe.svg', 'shield.svg', 'shoulder.svg', 'staff.svg', 'sword.svg', 'torch.svg', 'wine.svg'],
+            main: ['demon.svg', 'dragon.svg', 'frankenstein.svg', 'goblin.svg', 'mummy.svg', 'skeleton.svg', 'succubus.svg', 'vampire.svg', 'werewolf.svg', 'zombie.svg'],
+            bg: ['demon.svg', 'dragon.svg', 'frankenstein.svg', 'goblin.svg', 'mummy.svg', 'skeleton.svg', 'succubus.svg', 'vampire.svg', 'werewolf.svg', 'zombie.svg']
         };
         
         // Initialize drag and drop
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize asset selectors
+            initializeAssetSelectors();
             // Set up drag and drop for each layer
             ['effect', 'item', 'main', 'bg'].forEach(layerName => {
                 const dropZone = document.getElementById(`${layerName}-drop`);
@@ -391,18 +500,6 @@
                 layerItem.addEventListener('drop', (e) => handleDrop(e, layerName));
             });
             
-            // Initialize preview size display
-            updatePreviewSize(1);
-            
-            // Scale button handlers
-            document.querySelectorAll('.scale-button').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.scale-button').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const scale = parseInt(this.dataset.scale);
-                    updatePreviewSize(scale);
-                });
-            });
         });
         
         function handleDragOver(e) {
@@ -473,20 +570,18 @@
         function updatePreview() {
             const preview = document.getElementById('preview');
             
-            // Update each layer with scaling
+            // Update each layer
             ['bg', 'main', 'item', 'effect'].forEach(layerName => {
                 const layerElement = document.getElementById(`${layerName}-layer`);
                 layerElement.innerHTML = '';
                 
                 if (layers[layerName].content && layers[layerName].visible) {
+                    // Create a group with transform for scaling
                     const scale = layers[layerName].scale;
-                    
                     if (scale !== 1) {
-                        // Apply scaling transform
-                        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-                        g.setAttribute('transform', `scale(${scale})`);
-                        g.innerHTML = layers[layerName].content;
-                        layerElement.appendChild(g);
+                        // Calculate center point for scaling (256 is half of 512 viewBox)
+                        const transform = `scale(${scale}) translate(${256 * (1 - scale)}, ${256 * (1 - scale)})`;
+                        layerElement.innerHTML = `<g transform="${transform}">${layers[layerName].content}</g>`;
                     } else {
                         layerElement.innerHTML = layers[layerName].content;
                     }
@@ -520,17 +615,6 @@
             }
         }
         
-        function updatePreviewSize(scale) {
-            const preview = document.getElementById('preview');
-            const baseSize = 512;
-            const newSize = baseSize * scale;
-            
-            preview.style.width = newSize + 'px';
-            preview.style.height = newSize + 'px';
-            
-            const sizeDisplay = document.getElementById('previewSize');
-            sizeDisplay.textContent = scale > 1 ? `${baseSize} × ${baseSize} (${scale}x)` : `${baseSize} × ${baseSize}`;
-        }
         
         function exportComposite() {
             const preview = document.getElementById('preview');
@@ -575,6 +659,128 @@
             link.click();
             
             URL.revokeObjectURL(svgUrl);
+        }
+        
+        // Update layer scale
+        function updateLayerScale(layerName, scale) {
+            layers[layerName].scale = parseFloat(scale);
+            
+            // Update the scale value display
+            const scaleValue = document.querySelector(`[data-layer="${layerName}"] .scale-value`);
+            scaleValue.textContent = `${scale}x`;
+            
+            // Update preview with new scale
+            updatePreview();
+        }
+        
+        // Asset selector functions
+        function initializeAssetSelectors() {
+            Object.keys(assetLists).forEach(layerName => {
+                const assetGrid = document.querySelector(`#${layerName}-assets .asset-grid`);
+                assetGrid.innerHTML = '';
+                
+                assetLists[layerName].forEach(filename => {
+                    const assetItem = document.createElement('div');
+                    assetItem.className = 'asset-item';
+                    assetItem.onclick = () => loadAsset(layerName, filename);
+                    
+                    const img = document.createElement('img');
+                    img.src = `assets/${layerName}/${filename}`;
+                    img.alt = filename;
+                    img.title = filename.replace('.svg', '');
+                    
+                    assetItem.appendChild(img);
+                    assetGrid.appendChild(assetItem);
+                });
+            });
+        }
+        
+        function toggleAssetSelector(layerName) {
+            const selector = document.getElementById(`${layerName}-assets`);
+            const dropZone = document.getElementById(`${layerName}-drop`);
+            const button = event.target;
+            
+            if (selector.style.display === 'none') {
+                selector.style.display = 'block';
+                dropZone.style.display = 'none';
+                button.textContent = 'Drop File Instead';
+            } else {
+                selector.style.display = 'none';
+                dropZone.style.display = 'flex';
+                button.textContent = 'Select from Assets';
+            }
+        }
+        
+        function loadAsset(layerName, filename) {
+            // Use XMLHttpRequest instead of fetch for better local file support
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `assets/${layerName}/${filename}`, true);
+            
+            xhr.onload = function() {
+                if (xhr.status === 200 || xhr.status === 0) { // status 0 for local files
+                    try {
+                        const parser = new DOMParser();
+                        const svgDoc = parser.parseFromString(xhr.responseText, 'image/svg+xml');
+                        const svgElement = svgDoc.documentElement;
+                        
+                        if (svgElement.tagName === 'svg') {
+                            layers[layerName].content = svgElement.innerHTML;
+                            updateLayerUI(layerName, true);
+                            updatePreview();
+                            
+                            // Hide asset selector after selection
+                            document.getElementById(`${layerName}-assets`).style.display = 'none';
+                            document.getElementById(`${layerName}-drop`).style.display = 'flex';
+                            const button = document.querySelector(`[data-layer="${layerName}"] .asset-toggle-btn`);
+                            button.textContent = 'Select from Assets';
+                        }
+                    } catch (e) {
+                        console.error('Error parsing SVG:', e);
+                        // Fallback: use img tag to load SVG
+                        loadAssetAsImage(layerName, filename);
+                    }
+                } else {
+                    // Fallback: use img tag to load SVG
+                    loadAssetAsImage(layerName, filename);
+                }
+            };
+            
+            xhr.onerror = function() {
+                // Fallback: use img tag to load SVG
+                loadAssetAsImage(layerName, filename);
+            };
+            
+            xhr.send();
+        }
+        
+        // Fallback method using img tag
+        function loadAssetAsImage(layerName, filename) {
+            const img = new Image();
+            img.onload = function() {
+                // Create a simple rect placeholder since we can't get SVG content
+                const svgContent = `<rect x="0" y="0" width="512" height="512" fill="url(#img-${layerName})" />
+                    <defs>
+                        <pattern id="img-${layerName}" x="0" y="0" width="1" height="1">
+                            <image href="assets/${layerName}/${filename}" width="512" height="512" preserveAspectRatio="xMidYMid meet"/>
+                        </pattern>
+                    </defs>`;
+                
+                layers[layerName].content = svgContent;
+                updateLayerUI(layerName, true);
+                updatePreview();
+                
+                // Hide asset selector after selection
+                document.getElementById(`${layerName}-assets`).style.display = 'none';
+                document.getElementById(`${layerName}-drop`).style.display = 'flex';
+                const button = document.querySelector(`[data-layer="${layerName}"] .asset-toggle-btn`);
+                button.textContent = 'Select from Assets';
+            };
+            
+            img.onerror = function() {
+                alert('Failed to load asset: ' + filename + '\n\nPlease run a local web server to use asset selection.\nExample: python3 -m http.server 8000');
+            };
+            
+            img.src = `assets/${layerName}/${filename}`;
         }
     </script>
 </body>

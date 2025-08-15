@@ -1,50 +1,74 @@
-# PixEdit - SVG Pixel Art Editor
+# PixEdit - SVGピクセルアートエディター
 
-A simple, browser-based pixel art editor that works with SVG format. Create pixel art directly in your browser with an intuitive interface.
+SVG形式で動作するシンプルなブラウザベースのピクセルアートエディターです。直感的なインターフェースでブラウザ上でピクセルアートを作成できます。
 
-## Features
+## 機能
 
-### Drawing Tools
-- **Draw Tool** - Click to place pixels with selected color
-- **Erase Tool** - Remove pixels (make transparent)
-- **Fill Tool** - Flood fill areas with selected color
-- **Color Picker** (C key) - Hold C and click to pick colors from canvas
-- **Transparent Eraser** (X key) - Hold X and click to make pixels transparent
+### 描画ツール
+- **描画ツール** - 選択した色でピクセルを配置
+- **消しゴムツール** - ピクセルを削除（透明化）
+- **塗りつぶしツール** - 選択した色で領域を塗りつぶし
+- **カラーピッカー** (Cキー) - Cを押しながらクリックでキャンバスから色を取得
+- **透明消しゴム** (Xキー) - Xを押しながらクリックでピクセルを透明化
 
-### Canvas Features
-- Adjustable grid size (8×8 to 64×64 pixels)
-- Real-time preview with multiple zoom levels (1x to 16x)
-- Upload SVG files for editing
-- Shift entire canvas in any direction (↑↓←→ buttons)
-- Undo/Redo support (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z)
+### キャンバス機能
+- グリッドサイズ調整可能（8×8〜64×64ピクセル）
+- リアルタイムプレビュー、複数ズームレベル対応（1倍〜16倍）
+- SVGファイルのアップロード・編集
+- キャンバス全体を任意の方向にシフト（↑↓←→ボタン）
+- 元に戻す/やり直し機能（Cmd/Ctrl+Z、Cmd/Ctrl+Shift+Z）
 
-### Preview Options
-- Live preview with scalable display
-- Upload background images for preview
-- Upload foreground images for preview (overlays on top of pixel art)
-- Layer system: Background → Pixel Art → Foreground
-- Transparent background support with checkerboard pattern
+### プレビューオプション
+- スケーラブルな表示でのライブプレビュー
+- プレビュー用背景画像のアップロード
+- プレビュー用前景画像のアップロード（ピクセルアートの上に重ねて表示）
+- レイヤーシステム：背景 → ピクセルアート → 前景
+- チェッカーボードパターンによる透明背景サポート
 
-### Export Options
-- Download as SVG (optimized for pixel art without grid lines)
-- Download as PNG with transparency support
+### エクスポートオプション
+- SVGとしてダウンロード（グリッド線なしのピクセルアート用に最適化）
+- 透明度サポート付きPNGとしてダウンロード
 
-## Usage
+## 使い方
 
-1. Open `index.html` in a web browser
-2. Select a color from the palette or use the custom color picker
-3. Choose a drawing tool (Draw, Erase, or Fill)
-4. Click on the canvas to create your pixel art
-5. Use the preview panel to see your art at different scales
-6. Export your creation as SVG or PNG
+1. ブラウザで`index.html`を開く
+2. パレットから色を選択、またはカスタムカラーピッカーを使用
+3. 描画ツール（描画、消去、塗りつぶし）を選択
+4. キャンバスをクリックしてピクセルアートを作成
+5. プレビューパネルで異なるスケールでアートを確認
+6. SVGまたはPNGとして作品をエクスポート
 
-## Keyboard Shortcuts
+## キーボードショートカット
 
-- **Cmd/Ctrl + Z** - Undo
-- **Cmd/Ctrl + Shift + Z** - Redo
-- **Hold C + Click** - Pick color from canvas
-- **Hold X + Click** - Make pixel transparent
+- **Cmd/Ctrl + Z** - 元に戻す
+- **Cmd/Ctrl + Shift + Z** - やり直し
+- **Cを押しながらクリック** - キャンバスから色を取得
+- **Xを押しながらクリック** - ピクセルを透明化
 
-## Browser Compatibility
+## ブラウザ互換性
 
-Works in all modern browsers that support SVG and HTML5 Canvas.
+SVGとHTML5 Canvasをサポートする全ての最新ブラウザで動作します。
+
+## ローカルでの実行
+
+### レイヤーコンポーザーでのアセット選択
+
+ブラウザのセキュリティ制限（CORS）により、レイヤーコンポーザー（`composer.html`）のアセット選択機能を使用するには、ローカルWebサーバーを実行する必要があります：
+
+```bash
+# Python 3
+python3 -m http.server 8000
+
+# Python 2
+python -m SimpleHTTPServer 8000
+
+# Node.js（http-serverがインストールされている場合）
+http-server -p 8000
+
+# PHP
+php -S localhost:8000
+```
+
+その後、ブラウザで http://localhost:8000 を開いてください。
+
+**注意**：HTMLファイルを直接開く（file://プロトコル）場合でも、アセット選択は動作しますが機能が制限されます - アセットは編集可能なSVGコンテンツではなく画像として読み込まれます。
