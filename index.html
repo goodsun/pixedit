@@ -1361,6 +1361,11 @@
                     copySelectionToClipboard();
                 }
             }
+            // Cmd+V or Ctrl+V for paste
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !e.shiftKey) {
+                e.preventDefault();
+                pasteFromClipboard();
+            }
             // C key for color picker mode (only when not holding Cmd/Ctrl)
             else if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) {
                 isColorPickerMode = true;
@@ -1851,15 +1856,19 @@
         }
         
         function showCopyFeedback() {
-            // Visual feedback for copy action
+            showFeedback('Copied to clipboard!', '#4CAF50');
+        }
+        
+        function showFeedback(message, color = '#4CAF50') {
+            // Visual feedback for actions
             const feedback = document.createElement('div');
-            feedback.textContent = 'Copied to clipboard!';
+            feedback.textContent = message;
             feedback.style.cssText = `
                 position: fixed;
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                background: #4CAF50;
+                background: ${color};
                 color: white;
                 padding: 10px 20px;
                 border-radius: 4px;
@@ -1874,6 +1883,121 @@
                 feedback.style.transition = 'opacity 0.5s';
                 setTimeout(() => document.body.removeChild(feedback), 500);
             }, 1500);
+        }
+        
+        async function pasteFromClipboard() {
+            try {
+                // Modern clipboard API
+                if (navigator.clipboard && navigator.clipboard.read) {
+                    const items = await navigator.clipboard.read();
+                    
+                    for (const item of items) {
+                        // Try to find SVG content
+                        if (item.types.includes('image/svg+xml')) {
+                            const blob = await item.getType('image/svg+xml');
+                            const text = await blob.text();
+                            parsePastedSVG(text);
+                            return;
+                        }
+                        // Try text content (might be SVG)
+                        else if (item.types.includes('text/plain')) {
+                            const blob = await item.getType('text/plain');
+                            const text = await blob.text();
+                            if (text.includes('<svg') && text.includes('</svg>')) {
+                                parsePastedSVG(text);
+                                return;
+                            }
+                        }
+                    }
+                    
+                    showFeedback('No valid SVG data found in clipboard', '#f44336');
+                } else {
+                    // Fallback for older browsers
+                    navigator.clipboard.readText().then(text => {
+                        if (text.includes('<svg') && text.includes('</svg>')) {
+                            parsePastedSVG(text);
+                        } else {
+                            showFeedback('No valid SVG data found in clipboard', '#f44336');
+                        }
+                    }).catch(err => {
+                        console.error('Failed to read clipboard:', err);
+                        showFeedback('Failed to read clipboard', '#f44336');
+                    });
+                }
+            } catch (err) {
+                console.error('Paste error:', err);
+                showFeedback('Failed to paste: ' + err.message, '#f44336');
+            }
+        }
+        
+        function parsePastedSVG(svgText) {
+            try {
+                const parser = new DOMParser();
+                const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+                const svgElement = svgDoc.querySelector('svg');
+                
+                if (!svgElement) {
+                    showFeedback('Invalid SVG data', '#f44336');
+                    return;
+                }
+                
+                // Save state before pasting
+                saveState();
+                
+                // Get SVG dimensions
+                let svgWidth = parseInt(svgElement.getAttribute('width')) || 24;
+                let svgHeight = parseInt(svgElement.getAttribute('height')) || 24;
+                
+                // If viewBox exists, use those dimensions
+                const viewBox = svgElement.getAttribute('viewBox');
+                if (viewBox) {
+                    const [x, y, w, h] = viewBox.split(' ').map(Number);
+                    svgWidth = w;
+                    svgHeight = h;
+                }
+                
+                // Determine paste position
+                let pasteX = 0;
+                let pasteY = 0;
+                
+                // If there's a selection, paste at selection start
+                if (selection) {
+                    pasteX = Math.min(selection.startX, selection.endX);
+                    pasteY = Math.min(selection.startY, selection.endY);
+                }
+                
+                // Parse and paste pixels
+                const rects = svgElement.querySelectorAll('rect');
+                let pastedCount = 0;
+                
+                rects.forEach(rect => {
+                    const x = parseInt(rect.getAttribute('x') || 0);
+                    const y = parseInt(rect.getAttribute('y') || 0);
+                    const fill = rect.getAttribute('fill');
+                    
+                    if (fill && fill !== 'transparent' && fill !== 'none') {
+                        const targetX = pasteX + x;
+                        const targetY = pasteY + y;
+                        
+                        if (targetX >= 0 && targetX < gridWidth && targetY >= 0 && targetY < gridHeight) {
+                            pixels[targetY][targetX].setAttribute('fill', fill);
+                            pastedCount++;
+                        }
+                    }
+                });
+                
+                updatePreview();
+                
+                if (pastedCount > 0) {
+                    showFeedback(`Pasted ${pastedCount} pixels`, '#4CAF50');
+                } else {
+                    showFeedback('No pixels were pasted (out of bounds)', '#ff9800');
+                }
+                
+            } catch (err) {
+                console.error('SVG parsing error:', err);
+                showFeedback('Failed to parse SVG data', '#f44336');
+            }
         }
         
         // Initialize
