@@ -396,6 +396,7 @@
                 <button class="tool-button active" data-tool="draw">Draw</button>
                 <button class="tool-button" data-tool="erase">Erase</button>
                 <button class="tool-button" data-tool="fill">Fill</button>
+                <button class="tool-button" data-tool="select">Select</button>
             </div>
             
             <div class="grid-size">
@@ -542,6 +543,8 @@
         let backgroundImage = null;
         let foregroundImage = null;
         let isGridVisible = true; // Grid visibility state
+        let selection = null; // Selection area: {startX, startY, endX, endY}
+        let isSelecting = false;
         
         const canvas = document.getElementById('pixelCanvas');
         const previewCanvas = document.getElementById('previewCanvas');
@@ -651,6 +654,17 @@
                 }
             }
             
+            // Create selection rectangle (initially hidden)
+            const selectionRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            selectionRect.setAttribute('id', 'selectionRect');
+            selectionRect.setAttribute('fill', 'none');
+            selectionRect.setAttribute('stroke', '#4CAF50');
+            selectionRect.setAttribute('stroke-width', '2');
+            selectionRect.setAttribute('stroke-dasharray', '5,5');
+            selectionRect.style.display = 'none';
+            selectionRect.style.pointerEvents = 'none';
+            canvas.appendChild(selectionRect);
+            
             // Save initial state
             if (saveHistory) {
                 saveState();
@@ -744,6 +758,11 @@
                 document.querySelectorAll('.tool-button').forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
                 currentTool = this.dataset.tool;
+                
+                // Clear selection when switching tools
+                if (currentTool !== 'select' && selection) {
+                    clearSelection();
+                }
             });
         });
         
@@ -789,25 +808,52 @@
         
         // Mouse events
         canvas.addEventListener('mousedown', function(e) {
-            isDrawing = true;
-            if (currentTool !== 'fill') {
-                saveState();
+            if (currentTool === 'select') {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / pixelSize);
+                const y = Math.floor((e.clientY - rect.top) / pixelSize);
+                
+                // Start new selection
+                isSelecting = true;
+                selection = {
+                    startX: x,
+                    startY: y,
+                    endX: x,
+                    endY: y
+                };
+                updateSelectionDisplay();
+            } else {
+                isDrawing = true;
+                if (currentTool !== 'fill') {
+                    saveState();
+                }
+                handleMouseAction(e);
             }
-            handleMouseAction(e);
         });
         
         canvas.addEventListener('mousemove', function(e) {
-            if (isDrawing && currentTool !== 'fill') {
+            if (currentTool === 'select' && isSelecting) {
+                const rect = canvas.getBoundingClientRect();
+                const x = Math.floor((e.clientX - rect.left) / pixelSize);
+                const y = Math.floor((e.clientY - rect.top) / pixelSize);
+                
+                // Update selection end point
+                selection.endX = Math.max(0, Math.min(gridWidth - 1, x));
+                selection.endY = Math.max(0, Math.min(gridHeight - 1, y));
+                updateSelectionDisplay();
+            } else if (isDrawing && currentTool !== 'fill') {
                 handleMouseAction(e);
             }
         });
         
         canvas.addEventListener('mouseup', function() {
             isDrawing = false;
+            isSelecting = false;
         });
         
         canvas.addEventListener('mouseleave', function() {
             isDrawing = false;
+            isSelecting = false;
         });
         
         function handleMouseAction(e) {
@@ -1308,8 +1354,15 @@
                 e.preventDefault();
                 redo();
             }
-            // C key for color picker mode
-            else if (e.key === 'c' || e.key === 'C') {
+            // Cmd+C or Ctrl+C for copy selection
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !e.shiftKey) {
+                if (currentTool === 'select' && selection) {
+                    e.preventDefault();
+                    copySelectionToClipboard();
+                }
+            }
+            // C key for color picker mode (only when not holding Cmd/Ctrl)
+            else if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey) {
                 isColorPickerMode = true;
                 canvas.style.cursor = 'crosshair';
             }
@@ -1681,6 +1734,146 @@
             link.download = uploadedFileName ? `${uploadedFileName}.svg` : 'pixel-art.svg';
             link.click();
             URL.revokeObjectURL(url);
+        }
+        
+        // Selection functions
+        function updateSelectionDisplay() {
+            const selectionRect = document.getElementById('selectionRect');
+            if (!selection || !selectionRect) return;
+            
+            const minX = Math.min(selection.startX, selection.endX);
+            const minY = Math.min(selection.startY, selection.endY);
+            const maxX = Math.max(selection.startX, selection.endX);
+            const maxY = Math.max(selection.startY, selection.endY);
+            
+            selectionRect.setAttribute('x', minX * pixelSize);
+            selectionRect.setAttribute('y', minY * pixelSize);
+            selectionRect.setAttribute('width', (maxX - minX + 1) * pixelSize);
+            selectionRect.setAttribute('height', (maxY - minY + 1) * pixelSize);
+            selectionRect.style.display = 'block';
+            
+            // Create animated dash effect
+            let dashOffset = 0;
+            const animateDash = setInterval(() => {
+                if (!selection || currentTool !== 'select') {
+                    clearInterval(animateDash);
+                    return;
+                }
+                dashOffset = (dashOffset + 1) % 10;
+                selectionRect.setAttribute('stroke-dashoffset', dashOffset);
+            }, 50);
+        }
+        
+        function clearSelection() {
+            selection = null;
+            const selectionRect = document.getElementById('selectionRect');
+            if (selectionRect) {
+                selectionRect.style.display = 'none';
+            }
+        }
+        
+        function copySelectionToClipboard() {
+            if (!selection) return;
+            
+            const minX = Math.min(selection.startX, selection.endX);
+            const minY = Math.min(selection.startY, selection.endY);
+            const maxX = Math.max(selection.startX, selection.endX);
+            const maxY = Math.max(selection.startY, selection.endY);
+            
+            const width = maxX - minX + 1;
+            const height = maxY - minY + 1;
+            
+            // Create SVG for the selection
+            const selectionSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            selectionSvg.setAttribute('width', width);
+            selectionSvg.setAttribute('height', height);
+            selectionSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+            selectionSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            selectionSvg.setAttribute('shape-rendering', 'crispEdges');
+            
+            // Copy pixels within selection
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    const color = pixels[y][x].getAttribute('fill');
+                    if (color !== 'transparent') {
+                        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                        rect.setAttribute('x', x - minX);
+                        rect.setAttribute('y', y - minY);
+                        rect.setAttribute('width', 1);
+                        rect.setAttribute('height', 1);
+                        rect.setAttribute('fill', color);
+                        selectionSvg.appendChild(rect);
+                    }
+                }
+            }
+            
+            // Convert to string
+            const svgString = new XMLSerializer().serializeToString(selectionSvg);
+            
+            // Create blob for clipboard
+            const svgBlob = new Blob([svgString], { type: 'image/svg+xml' });
+            
+            // Modern clipboard API
+            if (navigator.clipboard && window.ClipboardItem) {
+                const item = new ClipboardItem({
+                    'image/svg+xml': svgBlob,
+                    'text/plain': new Blob([svgString], { type: 'text/plain' })
+                });
+                
+                navigator.clipboard.write([item]).then(() => {
+                    // Show feedback
+                    showCopyFeedback();
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    // Fallback to text copy
+                    fallbackTextCopy(svgString);
+                });
+            } else {
+                // Fallback for older browsers
+                fallbackTextCopy(svgString);
+            }
+        }
+        
+        function fallbackTextCopy(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.left = '-999999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                showCopyFeedback();
+            } catch (err) {
+                console.error('Fallback copy failed:', err);
+            }
+            document.body.removeChild(textarea);
+        }
+        
+        function showCopyFeedback() {
+            // Visual feedback for copy action
+            const feedback = document.createElement('div');
+            feedback.textContent = 'Copied to clipboard!';
+            feedback.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: #4CAF50;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 4px;
+                font-size: 16px;
+                z-index: 10000;
+                pointer-events: none;
+            `;
+            document.body.appendChild(feedback);
+            
+            setTimeout(() => {
+                feedback.style.opacity = '0';
+                feedback.style.transition = 'opacity 0.5s';
+                setTimeout(() => document.body.removeChild(feedback), 500);
+            }, 1500);
         }
         
         // Initialize
