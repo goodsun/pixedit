@@ -526,6 +526,19 @@
         </div>
     </div>
 
+    <!-- Rotation Modal -->
+    <div id="rotationModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 350px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #333;">選択範囲の回転</h3>
+            <p id="rotationWarning" style="margin-bottom: 20px; color: #666;"></p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="rotate90Btn" style="padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">90度回転</button>
+                <button id="rotate180Btn" style="padding: 8px 16px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">180度回転</button>
+                <button id="rotationCancelBtn" style="padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentColor = '#000000';
         let currentTool = 'draw';
@@ -1377,6 +1390,13 @@
                 isTransparentMode = true;
                 canvas.style.cursor = 'crosshair';
             }
+            // R key for rotation (only when selection tool is active and there's a selection)
+            else if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) {
+                if (currentTool === 'select' && selection) {
+                    e.preventDefault();
+                    initiateRotation();
+                }
+            }
         });
         
         document.addEventListener('keyup', function(e) {
@@ -1886,6 +1906,131 @@
             }, 1500);
         }
         
+        // Rotation functions
+        function initiateRotation() {
+            if (!selection) {
+                showFeedback('Please select an area first', '#f44336');
+                return;
+            }
+
+            const minX = Math.min(selection.startX, selection.endX);
+            const maxX = Math.max(selection.startX, selection.endX);
+            const minY = Math.min(selection.startY, selection.endY);
+            const maxY = Math.max(selection.startY, selection.endY);
+            
+            const width = maxX - minX + 1;
+            const height = maxY - minY + 1;
+            
+            const modal = document.getElementById('rotationModal');
+            const warning = document.getElementById('rotationWarning');
+            
+            if (width !== height) {
+                warning.textContent = `選択範囲が正方形ではありません (${width}x${height})。90度回転すると範囲外のピクセルは削除されます。`;
+            } else {
+                warning.textContent = `選択範囲: ${width}x${height}`;
+            }
+            
+            modal.style.display = 'block';
+        }
+
+        function closeRotationModal() {
+            document.getElementById('rotationModal').style.display = 'none';
+        }
+
+        function performRotation(degrees) {
+            if (!selection) {
+                closeRotationModal();
+                return;
+            }
+
+            const minX = Math.min(selection.startX, selection.endX);
+            const maxX = Math.max(selection.startX, selection.endX);
+            const minY = Math.min(selection.startY, selection.endY);
+            const maxY = Math.max(selection.startY, selection.endY);
+            
+            const width = maxX - minX + 1;
+            const height = maxY - minY + 1;
+            
+            // Save current selection data
+            const selectionData = [];
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (pixels[y] && pixels[y][x]) {
+                        const color = pixels[y][x].getAttribute('fill');
+                        if (color && color !== 'white' && color !== 'transparent') {
+                            selectionData.push({
+                                x: x - minX,
+                                y: y - minY,
+                                color: color
+                            });
+                        }
+                    }
+                }
+            }
+            
+            // Clear the original selection area
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (pixels[y] && pixels[y][x]) {
+                        pixels[y][x].setAttribute('fill', 'white');
+                    }
+                }
+            }
+            
+            // Apply rotation and place back
+            if (degrees === 90) {
+                // For 90 degree rotation, new width = old height, new height = old width
+                const newWidth = height;
+                const newHeight = width;
+                const maxDimension = Math.max(width, height);
+                
+                selectionData.forEach(pixel => {
+                    // 90 degree clockwise rotation: (x,y) -> (height-1-y, x)
+                    const newX = height - 1 - pixel.y;
+                    const newY = pixel.x;
+                    
+                    // Only place pixels that fit within the original square area
+                    if (newX < maxDimension && newY < maxDimension) {
+                        const targetX = minX + newX;
+                        const targetY = minY + newY;
+                        
+                        if (targetX < gridWidth && targetY < gridHeight && pixels[targetY] && pixels[targetY][targetX]) {
+                            pixels[targetY][targetX].setAttribute('fill', pixel.color);
+                        }
+                    }
+                });
+            } else if (degrees === 180) {
+                // 180 degree rotation: (x,y) -> (width-1-x, height-1-y)
+                selectionData.forEach(pixel => {
+                    const newX = width - 1 - pixel.x;
+                    const newY = height - 1 - pixel.y;
+                    const targetX = minX + newX;
+                    const targetY = minY + newY;
+                    
+                    if (targetX < gridWidth && targetY < gridHeight && pixels[targetY] && pixels[targetY][targetX]) {
+                        pixels[targetY][targetX].setAttribute('fill', pixel.color);
+                    }
+                });
+            }
+            
+            saveStateForUndo();
+            showFeedback(`${degrees}度回転しました`, '#4CAF50');
+            closeRotationModal();
+        }
+
+        // Add event listeners for rotation modal buttons
+        document.getElementById('rotate90Btn').addEventListener('click', function() {
+            performRotation(90);
+        });
+        
+        document.getElementById('rotate180Btn').addEventListener('click', function() {
+            performRotation(180);
+        });
+        
+        document.getElementById('rotationCancelBtn').addEventListener('click', function() {
+            closeRotationModal();
+        });
+
         async function pasteFromClipboard() {
             try {
                 // Modern clipboard API
