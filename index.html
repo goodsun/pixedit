@@ -539,6 +539,53 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); min-width: 350px;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #333;">選択範囲の削除</h3>
+            <p style="margin-bottom: 20px; color: #666;">選択範囲を削除しますか？この操作は取り消せます。</p>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="deleteConfirmBtn" style="padding: 8px 16px; background-color: #f44336; color: white; border: none; border-radius: 4px; cursor: pointer;">削除</button>
+                <button id="deleteCancelBtn" style="padding: 8px 16px; background-color: #9E9E9E; color: white; border: none; border-radius: 4px; cursor: pointer;">キャンセル</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 2000;">
+        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); max-width: 600px; max-height: 80vh; overflow-y: auto;">
+            <h3 style="margin-top: 0; margin-bottom: 20px; color: #333;">キーボードショートカット</h3>
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #555;">一般操作</h4>
+                <div style="line-height: 1.6;">
+                    <div><strong>H</strong> - このヘルプを表示</div>
+                    <div><strong>Cmd/Ctrl + Z</strong> - 元に戻す (Undo)</div>
+                    <div><strong>Cmd/Ctrl + Shift + Z</strong> - やり直し (Redo)</div>
+                    <div><strong>Cmd/Ctrl + Y</strong> - やり直し (Redo)</div>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #555;">描画ツール</h4>
+                <div style="line-height: 1.6;">
+                    <div><strong>C</strong> - カラーピッカーモード（押している間）</div>
+                    <div><strong>X</strong> - 透明モード（押している間）</div>
+                </div>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <h4 style="margin-bottom: 10px; color: #555;">選択ツール</h4>
+                <div style="line-height: 1.6;">
+                    <div><strong>Cmd/Ctrl + C</strong> - 選択範囲をコピー</div>
+                    <div><strong>Cmd/Ctrl + V</strong> - ペースト</div>
+                    <div><strong>R</strong> - 選択範囲を回転</div>
+                    <div><strong>X</strong> - 選択範囲を削除</div>
+                </div>
+            </div>
+            <div style="text-align: center; margin-top: 30px;">
+                <button id="closeHelpBtn" style="padding: 10px 24px; background-color: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer;">閉じる</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentColor = '#000000';
         let currentTool = 'draw';
@@ -1385,10 +1432,15 @@
                 isColorPickerMode = true;
                 canvas.style.cursor = 'crosshair';
             }
-            // X key for transparent mode
+            // X key - transparent mode for draw tool, delete for select tool
             else if (e.key === 'x' || e.key === 'X') {
-                isTransparentMode = true;
-                canvas.style.cursor = 'crosshair';
+                if (currentTool === 'select' && selection) {
+                    e.preventDefault();
+                    showDeleteConfirmation();
+                } else if (currentTool === 'draw') {
+                    isTransparentMode = true;
+                    canvas.style.cursor = 'crosshair';
+                }
             }
             // R key for rotation (only when selection tool is active and there's a selection)
             else if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey) {
@@ -1396,6 +1448,11 @@
                     e.preventDefault();
                     initiateRotation();
                 }
+            }
+            // H key for help
+            else if ((e.key === 'h' || e.key === 'H') && !e.metaKey && !e.ctrlKey) {
+                e.preventDefault();
+                showHelp();
             }
         });
         
@@ -1937,6 +1994,54 @@
             document.getElementById('rotationModal').style.display = 'none';
         }
 
+        // Help modal functions
+        function showHelp() {
+            document.getElementById('helpModal').style.display = 'block';
+        }
+
+        function closeHelp() {
+            document.getElementById('helpModal').style.display = 'none';
+        }
+
+        // Delete selection functions
+        function showDeleteConfirmation() {
+            if (!selection) {
+                showFeedback('Please select an area first', '#f44336');
+                return;
+            }
+            document.getElementById('deleteModal').style.display = 'block';
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+        function deleteSelection() {
+            if (!selection) {
+                closeDeleteModal();
+                return;
+            }
+
+            const minX = Math.min(selection.startX, selection.endX);
+            const maxX = Math.max(selection.startX, selection.endX);
+            const minY = Math.min(selection.startY, selection.endY);
+            const maxY = Math.max(selection.startY, selection.endY);
+
+            // Delete pixels in selection
+            for (let y = minY; y <= maxY; y++) {
+                for (let x = minX; x <= maxX; x++) {
+                    if (pixels[y] && pixels[y][x]) {
+                        pixels[y][x].setAttribute('fill', 'white');
+                    }
+                }
+            }
+
+            saveState();
+            clearSelection();
+            showFeedback('選択範囲を削除しました', '#4CAF50');
+            closeDeleteModal();
+        }
+
         function performRotation(degrees) {
             if (!selection) {
                 closeRotationModal();
@@ -2029,6 +2134,39 @@
         
         document.getElementById('rotationCancelBtn').addEventListener('click', function() {
             closeRotationModal();
+        });
+
+        // Add event listener for help modal close button
+        document.getElementById('closeHelpBtn').addEventListener('click', function() {
+            closeHelp();
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('helpModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeHelp();
+            }
+        });
+
+        document.getElementById('rotationModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRotationModal();
+            }
+        });
+
+        // Add event listeners for delete modal buttons
+        document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+            deleteSelection();
+        });
+
+        document.getElementById('deleteCancelBtn').addEventListener('click', function() {
+            closeDeleteModal();
+        });
+
+        document.getElementById('deleteModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteModal();
+            }
         });
 
         async function pasteFromClipboard() {
